@@ -1,98 +1,138 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SpicinessPicker } from '../components/SpicinessPicker';
+import { TaskTreeItem } from '../components/TaskTreeItem';
+import { useTaskStore } from '../store/useTaskStore';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function MagicTodoScreen() {
+  const [newTaskText, setNewTaskText] = useState('');
+  const { tasks, defaultSpiciness, setDefaultSpiciness, addRootTask, clearCompleted } =
+    useTaskStore();
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+  const handleAdd = () => {
+    if (!newTaskText.trim()) return;
+    addRootTask(newTaskText);
+    setNewTaskText('');
+    Keyboard.dismiss();
+  };
+
+  const hasCompleted = tasks.some((t) => t.completed);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      <SpicinessPicker
+        value={defaultSpiciness}
+        onChange={setDefaultSpiciness}
+        label="مستوى تفصيل العصا السحرية ✨"
+      />
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      <View style={styles.addRow}>
+        <TextInput
+          style={styles.input}
+          placeholder="أضف مهمة ثقيلة... (مثلاً: أذاكر الفصل الرابع)"
+          placeholderTextColor="#9CA3AF"
+          value={newTaskText}
+          onChangeText={setNewTaskText}
+          onSubmitEditing={handleAdd}
+          returnKeyType="done"
+          textAlign="right"
+        />
+        <Pressable
+          style={[styles.addBtn, !newTaskText.trim() && styles.addBtnDisabled]}
+          onPress={handleAdd}
+          disabled={!newTaskText.trim()}
+        >
+          <Ionicons name="add" size={26} color="#FFFFFF" />
+        </Pressable>
+      </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      {tasks.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Ionicons name="sparkles-outline" size={40} color="#9CA3AF" />
+          <Text style={styles.emptyTitle}>قائمتك فاضية الحين</Text>
+          <Text style={styles.emptySubtitle}>
+            أضف أي مهمة فوق، واضغط زر &quot;قسّمها&quot; عشان نفككها لخطوات صغيرة — وتقدر تقسّم كل خطوة فرعية أكثر!
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.listSection}>
+          <View style={styles.listHeader}>
+            <Text style={styles.listTitle}>مهامك ({tasks.length})</Text>
+            {hasCompleted && (
+              <Pressable onPress={clearCompleted}>
+                <Text style={styles.clearBtnText}>مسح المنجزة</Text>
+              </Pressable>
+            )}
+          </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          {tasks.map((task) => (
+            <TaskTreeItem key={task.id} node={task} />
+          ))}
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  content: { padding: 18, gap: 14, paddingBottom: 40 },
+  addRow: { flexDirection: 'row-reverse', gap: 10 },
+  input: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
+  addBtn: {
+    width: 50,
+    borderRadius: 14,
+    backgroundColor: '#0F766E',
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
   },
-  title: {
+  addBtnDisabled: { opacity: 0.45 },
+  emptyBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 8,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#374151' },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 22,
   },
-  code: {
-    textTransform: 'uppercase',
+  listSection: { gap: 10, marginTop: 4 },
+  listHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  listTitle: { fontSize: 15, fontWeight: '700', color: '#374151' },
+  clearBtnText: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
 });
